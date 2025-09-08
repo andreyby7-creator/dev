@@ -1,0 +1,174 @@
+# Default values for SaleSpot SaaS Platform
+replicaCount:
+  api: 3
+  web: 2
+
+image:
+  api:
+    repository: salespot-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  web:
+    repository: salespot-web
+    tag: latest
+    pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ''
+fullnameOverride: ''
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ''
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    nginx.ingress.kubernetes.io/rate-limit: '100'
+    nginx.ingress.kubernetes.io/rate-limit-window: '1m'
+  hosts:
+    - host: api.salespot.by
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: salespot.by
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: salespot-tls
+      hosts:
+        - api.salespot.by
+        - salespot.by
+
+resources:
+  api:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  web:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+autoscaling:
+  enabled: true
+  api:
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  web:
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Redis configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: 'redis-password'
+  architecture: standalone
+  master:
+    persistence:
+      enabled: true
+      size: 1Gi
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Kong API Gateway configuration
+kong:
+  enabled: true
+  admin:
+    enabled: true
+    type: ClusterIP
+  proxy:
+    enabled: true
+    type: LoadBalancer
+  postgresql:
+    enabled: true
+    auth:
+      postgresPassword: 'kong-postgres-password'
+      database: 'kong'
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# Environment variables
+env:
+  NODE_ENV: 'production'
+  PORT: '3001'
+  API_PREFIX: '/api/v1'
+  CORS_ORIGIN: 'https://salespot.by'
+  REDIS_HOST: 'salespot-redis'
+  REDIS_PORT: '6379'
+  KONG_ADMIN_URL: 'http://salespot-kong-admin:8001'
+  CIRCUIT_BREAKER_TIMEOUT: '30000'
+  CIRCUIT_BREAKER_ERROR_THRESHOLD: '5'
+  CIRCUIT_BREAKER_RESET_TIMEOUT: '60000'
+  CIRCUIT_BREAKER_VOLUME_THRESHOLD: '10'
+  LOAD_BALANCER_HEALTH_CHECK_INTERVAL: '30000'
+  LOAD_BALANCER_HEALTH_CHECK_TIMEOUT: '5000'
+  LOAD_BALANCER_MAX_RETRIES: '3'
+  SERVICE_DISCOVERY_HEARTBEAT_INTERVAL: '30000'
+  SERVICE_DISCOVERY_HEARTBEAT_TIMEOUT: '10000'
+  SERVICE_DISCOVERY_CLEANUP_INTERVAL: '60000'
+  SERVICE_DISCOVERY_MAX_AGE: '300000'
+
+# Secrets (should be provided externally)
+secrets:
+  SUPABASE_URL: ''
+  SUPABASE_ANON_KEY: ''
+  SUPABASE_SERVICE_ROLE_KEY: ''
+  JWT_SECRET: ''
+  DEFAULT_API_KEY: ''
+  REDIS_PASSWORD: ''
+  SENTRY_DSN: ''
+  BETTERSTACK_TOKEN: ''

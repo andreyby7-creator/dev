@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  # Blue Environment (Production)
+  api-blue:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+      target: production
+    image: salespot-api:blue
+    container_name: salespot-api-blue
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    ports:
+      - '3001:3001'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - salespot-network
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+
+  web-blue:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      target: production
+    image: salespot-web:blue
+    container_name: salespot-web-blue
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://api-blue:3001
+    ports:
+      - '3000:3000'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - salespot-network
+    depends_on:
+      api-blue:
+        condition: service_healthy
+
+  # Green Environment (Staging/New Version)
+  api-green:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+      target: production
+    image: salespot-api:green
+    container_name: salespot-api-green
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+    ports:
+      - '3002:3002'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3002/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - salespot-network
+    deploy:
+      replicas: 0 # Initially stopped
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+
+  web-green:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      target: production
+    image: salespot-web:green
+    container_name: salespot-web-green
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://api-green:3002
+    ports:
+      - '3003:3000'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - salespot-network
+    depends_on:
+      api-green:
+        condition: service_healthy
+    deploy:
+      replicas: 0 # Initially stopped
+
+  # Load Balancer (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: salespot-nginx
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - salespot-network
+    depends_on:
+      - api-blue
+      - web-blue
+    healthcheck:
+      test: ['CMD', 'nginx', '-t']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for session management
+  redis:
+    image: redis:7-alpine
+    container_name: salespot-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    networks:
+      - salespot-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: salespot-postgres
+    environment:
+      - POSTGRES_DB=salespot
+      - POSTGRES_USER=salespot
+      - POSTGRES_PASSWORD=salespot_password
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - salespot-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U salespot']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis-data:
+  postgres-data:
+
+networks:
+  salespot-network:
+    driver: bridge

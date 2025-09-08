@@ -1,0 +1,189 @@
+groups:
+  - name: disaster-recovery
+    rules:
+      # Primary datacenter health check
+      - alert: PrimaryDatacenterUnhealthy
+        expr: up{job="api", datacenter="primary"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          datacenter: primary
+        annotations:
+          summary: 'Primary datacenter is unhealthy'
+          description: 'Primary datacenter has been unhealthy for more than 2 minutes. Consider initiating DR failover.'
+
+      # Secondary datacenter health check
+      - alert: SecondaryDatacenterUnhealthy
+        expr: up{job="api", datacenter="secondary"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          datacenter: secondary
+        annotations:
+          summary: 'Secondary datacenter is unhealthy'
+          description: 'Secondary datacenter has been unhealthy for more than 2 minutes.'
+
+      # High error rate in primary datacenter
+      - alert: PrimaryDatacenterHighErrorRate
+        expr: rate(http_requests_total{status=~"5..", datacenter="primary"}[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          datacenter: primary
+        annotations:
+          summary: 'High error rate in primary datacenter'
+          description: 'Error rate in primary datacenter is above 10% for more than 1 minute.'
+
+      # Database connection issues
+      - alert: DatabaseConnectionIssues
+        expr: pg_stat_database_numbackends{datname="salespot"} > 80
+        for: 2m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: 'High database connection count'
+          description: 'Database connection count is above 80 for more than 2 minutes.'
+
+      # Database replication lag
+      - alert: DatabaseReplicationLag
+        expr: pg_replication_lag_seconds > 300
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: 'Database replication lag detected'
+          description: 'Database replication lag is more than 5 minutes.'
+
+      # Redis connection issues
+      - alert: RedisConnectionIssues
+        expr: redis_connected_clients > 100
+        for: 2m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: 'High Redis connection count'
+          description: 'Redis connection count is above 100 for more than 2 minutes.'
+
+      # API response time degradation
+      - alert: APIResponseTimeDegradation
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 2m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: 'API response time degradation'
+          description: '95th percentile of API response time is above 2 seconds.'
+
+      # Web application health
+      - alert: WebApplicationUnhealthy
+        expr: up{job="web"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: web
+        annotations:
+          summary: 'Web application is unhealthy'
+          description: 'Web application has been down for more than 1 minute.'
+
+      # Load balancer health
+      - alert: LoadBalancerUnhealthy
+        expr: up{job="nginx"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: loadbalancer
+        annotations:
+          summary: 'Load balancer is unhealthy'
+          description: 'Load balancer has been down for more than 1 minute.'
+
+      # Disk space issues
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: 'Low disk space'
+          description: 'Disk space is below 10% for more than 5 minutes.'
+
+      # Memory usage high
+      - alert: MemoryUsageHigh
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 2m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: 'High memory usage'
+          description: 'Memory usage is above 90% for more than 2 minutes.'
+
+      # CPU usage high
+      - alert: CPUUsageHigh
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: 'High CPU usage'
+          description: 'CPU usage is above 80% for more than 2 minutes.'
+
+      # Network connectivity issues
+      - alert: NetworkConnectivityIssues
+        expr: up{job="blackbox"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: network
+        annotations:
+          summary: 'Network connectivity issues'
+          description: 'Network connectivity check failed for more than 1 minute.'
+
+      # SSL certificate expiration
+      - alert: SSLCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 30
+        for: 0m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: 'SSL certificate expiring soon'
+          description: 'SSL certificate will expire in less than 30 days.'
+
+      # Backup failure
+      - alert: BackupFailure
+        expr: backup_last_success_timestamp < time() - 86400
+        for: 1h
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: 'Backup failure detected'
+          description: 'No successful backup in the last 24 hours.'
+
+      # DR failover readiness
+      - alert: DRFailoverReadiness
+        expr: up{job="api", datacenter="secondary"} == 1 and up{job="api", datacenter="primary"} == 0
+        for: 0m
+        labels:
+          severity: info
+          component: dr
+        annotations:
+          summary: 'DR failover ready'
+          description: 'Secondary datacenter is healthy and ready for failover.'
+
+      # Service dependency health
+      - alert: ServiceDependencyUnhealthy
+        expr: up{job=~"postgres|redis|elasticsearch"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: dependency
+        annotations:
+          summary: 'Service dependency unhealthy'
+          description: 'Critical service dependency is down for more than 1 minute.'

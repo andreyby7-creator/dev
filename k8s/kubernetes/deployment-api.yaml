@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: salespot-api
+  namespace: salespot
+  labels:
+    app: salespot-api
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: salespot-api
+  template:
+    metadata:
+      labels:
+        app: salespot-api
+        version: v1
+    spec:
+      containers:
+        - name: api
+          image: salespot-api:latest
+          ports:
+            - containerPort: 3001
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: salespot-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: salespot-config
+                  key: PORT
+            - name: API_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: salespot-config
+                  key: API_PREFIX
+            - name: CORS_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: salespot-config
+                  key: CORS_ORIGIN
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: salespot-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: salespot-config
+                  key: REDIS_PORT
+            - name: SUPABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: salespot-secrets
+                  key: SUPABASE_URL
+            - name: SUPABASE_ANON_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: salespot-secrets
+                  key: SUPABASE_ANON_KEY
+            - name: SUPABASE_SERVICE_ROLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: salespot-secrets
+                  key: SUPABASE_SERVICE_ROLE_KEY
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: salespot-secrets
+                  key: JWT_SECRET
+            - name: DEFAULT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: salespot-secrets
+                  key: DEFAULT_API_KEY
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: salespot-secrets
+                  key: REDIS_PASSWORD
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: salespot-secrets
+                  key: SENTRY_DSN
+            - name: BETTERSTACK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: salespot-secrets
+                  key: BETTERSTACK_TOKEN
+          resources:
+            requests:
+              memory: '256Mi'
+              cpu: '250m'
+            limits:
+              memory: '512Mi'
+              cpu: '500m'
+          livenessProbe:
+            httpGet:
+              path: /api/v1/observability/health
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/v1/observability/health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /api/v1/observability/health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
