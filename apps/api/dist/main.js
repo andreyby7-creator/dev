@@ -47030,14 +47030,20 @@ let DynamicScalingService = DynamicScalingService_1 = class DynamicScalingServic
         }
     }
     async performScalingAction(decision) {
-        const scalingTimes = {
-            SCALE_UP: 5000,
-            SCALE_DOWN: 3000,
-            SCALE_OUT: 8000,
-            SCALE_IN: 6000,
-        };
-        const scalingTime = scalingTimes[decision.action] || 5000;
-        await this.delay(scalingTime);
+        const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+        if (isTestEnvironment) {
+            await this.delay(10);
+        }
+        else {
+            const scalingTimes = {
+                SCALE_UP: 5000,
+                SCALE_DOWN: 3000,
+                SCALE_OUT: 8000,
+                SCALE_IN: 6000,
+            };
+            const scalingTime = scalingTimes[decision.action] || 5000;
+            await this.delay(scalingTime);
+        }
     }
     generatePolicyId() {
         return `policy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

@@ -14,7 +14,7 @@
     "start:dev": "nest start --watch --port 3001",
     "start:debug": "nest start --debug --watch --port 3001",
     "start:prod": "node dist/main",
-    "lint": "eslint \"src/**/*.ts\" --fix",
+    "lint": "eslint \"src/**/*.ts\" --fix && eslint \"test/**/*.ts\" --fix --config eslint.config.test.js",
     "lint:src": "eslint \"src/**/*.ts\" --fix",
     "lint:test": "eslint \"test/**/*.ts\" --fix --config eslint.config.test.js",
     "test": "vitest run",

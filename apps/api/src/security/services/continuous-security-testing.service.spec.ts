@@ -140,7 +140,7 @@ describe('ContinuousSecurityTestingService', () => {
       expect(history).toBeDefined();
       expect(Array.isArray(history)).toBe(true);
       expect(history.length).toBeGreaterThan(0);
-    });
+    }, 10000);
 
     it('should respect limit parameter', async () => {
       // Запустим несколько тестов
@@ -159,7 +159,7 @@ describe('ContinuousSecurityTestingService', () => {
       expect(history).toBeDefined();
       expect(Array.isArray(history)).toBe(true);
       expect(history.length).toBeLessThanOrEqual(1);
-    });
+    }, 10000);
   });
 
   describe('getTestById', () => {

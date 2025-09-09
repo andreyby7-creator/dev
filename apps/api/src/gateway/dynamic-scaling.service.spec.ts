@@ -16,6 +16,12 @@ describe('DynamicScalingService', () => {
     }).compile();
 
     service = module.get<DynamicScalingService>(DynamicScalingService);
+
+    // Мокаем performScaling для быстрого выполнения
+    vi.spyOn(
+      service as unknown as { performScaling: () => Promise<boolean> },
+      'performScaling'
+    ).mockResolvedValue(true);
   });
 
   it('should be defined', () => {

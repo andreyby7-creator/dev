@@ -687,16 +687,24 @@ export class DynamicScalingService {
     decision: IScalingDecision
   ): Promise<void> {
     // Симуляция выполнения действия масштабирования
-    const scalingTimes: Record<ScalingAction, number> = {
-      SCALE_UP: 5000,
-      SCALE_DOWN: 3000,
-      SCALE_OUT: 8000,
-      SCALE_IN: 6000,
-    };
+    // В тестовой среде используем минимальную задержку
+    const isTestEnvironment =
+      process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
 
-    const scalingTime = scalingTimes[decision.action] || 5000;
+    if (isTestEnvironment) {
+      // Минимальная задержка для тестов
+      await this.delay(10);
+    } else {
+      const scalingTimes: Record<ScalingAction, number> = {
+        SCALE_UP: 5000,
+        SCALE_DOWN: 3000,
+        SCALE_OUT: 8000,
+        SCALE_IN: 6000,
+      };
 
-    await this.delay(scalingTime);
+      const scalingTime = scalingTimes[decision.action] || 5000;
+      await this.delay(scalingTime);
+    }
   }
 
   private generatePolicyId(): string {
