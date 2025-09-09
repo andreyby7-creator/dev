@@ -1,0 +1,6 @@
+node_modules/
+apps/web/.next/
+*.node
+node_modules/
+apps/web/.next/
+*.node
